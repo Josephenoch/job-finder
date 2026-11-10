@@ -267,16 +267,27 @@ async function fetchAshby(slug: string, sinceMs: number): Promise<NormalizedJob[
   return jobs;
 }
 
-async function mapPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
+async function mapPool<T>(items: T[], worker: (item: T) => Promise<void>): Promise<void> {
+  if (!items.length) return;
+  const pace = pacer(TARGET_PER_SEC);
   let next = 0;
+  let active = 0;
   async function run(): Promise<void> {
     while (next < items.length) {
+      while (active >= maxInFlight() && next < items.length) await delay(200);
+      if (next >= items.length) return;
       const index = next;
       next += 1;
-      await worker(items[index]);
+      active += 1;
+      try {
+        await pace();
+        await worker(items[index]);
+      } finally {
+        active -= 1;
+      }
     }
   }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => run()));
+  await Promise.all(Array.from({ length: Math.min(TARGET_PER_SEC, items.length) }, () => run()));
 }
 
 export async function fetchJobs(
