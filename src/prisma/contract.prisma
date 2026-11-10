@@ -1,0 +1,75 @@
+// use prisma-8
+
+enum ApplicationStatus {
+  @@type("sqlite/text@1")
+  saved           = "saved"
+  applied         = "applied"
+  interviewing    = "interviewing"
+  offer           = "offer"
+  rejected        = "rejected"
+  not_interested  = "not_interested"
+}
+
+model Job {
+  id         String            @id @onCreate(uuid())
+  externalId String            @unique
+  title      String
+  company    String
+  url        String
+  source     String
+  sourceUrl  String
+  postedAt   DateTime
+  location   String
+  salary     String
+  score      Int?
+  reason     String?
+  status     ApplicationStatus @default(saved)
+  createdAt  DateTime          @onCreate(now())
+  updatedAt  DateTime          @onCreate(now()) @onUpdate(now())
+}
+
+model SearchedListing {
+  externalId String   @id
+  searchedAt DateTime @onCreate(now()) @onUpdate(now())
+}
+
+enum RadarEligibility {
+  @@type("sqlite/text@1")
+  YES   = "YES"
+  MAYBE = "MAYBE"
+  NO    = "NO"
+}
+
+enum RadarStatus {
+  @@type("sqlite/text@1")
+  NEW     = "NEW"
+  SAVED   = "SAVED"
+  APPLIED = "APPLIED"
+  HIDDEN  = "HIDDEN"
+}
+
+model RadarJob {
+  id                 String           @id @onCreate(uuid())
+  source             String
+  externalId         String
+  title              String
+  company            String
+  url                String
+  applyUrl           String
+  descriptionSnippet String
+  locationText       String
+  eligibility        RadarEligibility
+  tags               Json             @default(json`[]`)
+  salaryMin          Int?
+  salaryMax          Int?
+  salaryCurrency     String?
+  postedAt           DateTime?
+  firstSeenAt        DateTime         @onCreate(now())
+  lastSeenAt         DateTime
+  score              Int              @default(0)
+  status             RadarStatus      @default(NEW)
+  dedupeKey          String
+
+  @@unique([source, externalId])
+  @@index([dedupeKey])
+}

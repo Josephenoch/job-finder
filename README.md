@@ -20,6 +20,17 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Adding a job source
+
+Radar adapters live in `src/lib/jobs/sources/`. The CV search in `lib/sources/` is separate and is not part of this path.
+
+1. Add `src/lib/jobs/sources/<name>.ts` that exports `fetchJobs(): Promise<NormalizedJob[]>`.
+2. Validate the response with Zod before mapping fields. Use the official API or RSS feed only.
+3. Map each listing with `toNormalizedJob`. Set `source` to the site name and `url` to the original listing.
+4. Register the function in the `sources` array in `src/lib/jobs/sources/index.ts`. A thrown error is caught there, so one source cannot stop the others.
+
+Company boards for Greenhouse, Lever, and Ashby are slugs in `src/lib/jobs/boards.ts`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
