@@ -43,7 +43,7 @@ Greenhouse, Lever, and Ashby company slugs live in `src/lib/jobs/boards.ts`. The
 
 ## Saved data
 
-SQLite is created at `data/jobs.db` on first use. Saved roles and the ids of listings already considered are stored there. Delete that file to start over.
+The installers create `data/jobs.db` and its tables. Saved roles and the ids of listings already considered are stored there. Delete that file to start over, then run the installer or opener again so the tables are recreated.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |

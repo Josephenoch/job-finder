@@ -31,6 +31,12 @@ if (-not (Test-Path (Join-Path $Root "node_modules"))) {
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
+$data = Join-Path $Root "data"
+if (-not (Test-Path $data)) { New-Item -ItemType Directory -Path $data | Out-Null }
+Write-Host "Preparing the job database..."
+& $corepack yarn prisma db init --yes
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 $ollama = Get-Command ollama -ErrorAction SilentlyContinue
 if ($ollama) {
   $up = $false

@@ -56,6 +56,10 @@ if [[ ! -d "$ROOT/node_modules" ]]; then
   corepack yarn install
 fi
 
+mkdir -p "$ROOT/data"
+printf 'Preparing the job database...\n'
+corepack yarn prisma db init --yes
+
 if command -v ollama >/dev/null 2>&1; then
   if ! curl -sf --max-time 2 -o /dev/null "http://127.0.0.1:11434/api/tags"; then
     case "$(uname -s)" in

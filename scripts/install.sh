@@ -223,6 +223,12 @@ install_deps() {
   corepack yarn install
 }
 
+prepare_database() {
+  mkdir -p "$ROOT/data"
+  log "Creating the job database"
+  corepack yarn prisma db init --yes
+}
+
 ollama_bin() {
   if command -v ollama >/dev/null 2>&1; then
     command -v ollama
@@ -329,6 +335,7 @@ main() {
   install_node
   enable_yarn
   install_deps
+  prepare_database
   install_ollama
   log "Setup finished."
   case "$OS" in

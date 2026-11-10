@@ -124,6 +124,14 @@ function Install-YarnAndPackages {
   if ($LASTEXITCODE -ne 0) { throw "yarn install failed." }
 }
 
+function Initialize-Database {
+  $data = Join-Path $Root "data"
+  if (-not (Test-Path $data)) { New-Item -ItemType Directory -Path $data | Out-Null }
+  Write-Step "Creating the job database"
+  & (Get-Corepack) yarn prisma db init --yes
+  if ($LASTEXITCODE -ne 0) { throw "Could not create the job database." }
+}
+
 function Test-OllamaUp {
   try {
     Invoke-WebRequest -Uri "http://127.0.0.1:11434/api/tags" -UseBasicParsing -TimeoutSec 3 | Out-Null
@@ -179,6 +187,7 @@ try {
   }
   Install-Node
   Install-YarnAndPackages
+  Initialize-Database
   Install-Ollama
   Write-Step "Setup finished."
   Write-Host 'Next: double-click "Open Job Finder.bat". Leave that window open while you use the app.'
