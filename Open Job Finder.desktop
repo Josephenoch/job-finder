@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Open Job Finder
+Comment=Start Job Finder and open it in the browser
+Terminal=true
+Exec=/bin/bash -c 'f="$1"; f="${f#file://}"; f="${f#localhost}"; f="${f//%%20/ }"; cd "$(dirname "$f")" && exec /bin/bash "./Open Job Finder.sh"' -- %k
+Categories=Development;

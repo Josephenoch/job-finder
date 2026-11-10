@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install Job Finder
+Comment=Install Node.js, Yarn, project packages, and Ollama
+Terminal=true
+Exec=/bin/bash -c 'f="$1"; f="${f#file://}"; f="${f#localhost}"; f="${f//%%20/ }"; cd "$(dirname "$f")" && exec /bin/bash "./Install Job Finder.sh"' -- %k
+Categories=Development;
