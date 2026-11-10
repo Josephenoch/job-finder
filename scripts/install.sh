@@ -7,7 +7,7 @@ cd "$ROOT"
 NODE_MIN="20.9.0"
 NODE_HOME="${JOB_FINDER_NODE_HOME:-$HOME/.local/job-finder/node}"
 YARN_VERSION="4.18.1"
-OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5:1.5b}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5:0.5b}"
 
 OS=""
 ARCH=""
@@ -309,7 +309,7 @@ install_ollama() {
     return 0
   fi
   if start_ollama "$bin"; then
-    log "Downloading ranking model $OLLAMA_MODEL (about 1 GB)"
+    log "Downloading ranking model $OLLAMA_MODEL (about 400 MB)"
     "$bin" pull "$OLLAMA_MODEL" || warn "Could not download $OLLAMA_MODEL."
   else
     warn "Ollama is installed but not running. Start it, then run: ollama pull $OLLAMA_MODEL"

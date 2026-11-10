@@ -16,7 +16,7 @@ The CV is read on your machine. Ranking uses [Ollama](https://ollama.com) on you
 
 Defaults are the last 3 days and $2,000 per month. Pay in EUR, GBP, CAD, AUD, and NGN is converted to a rough monthly USD figure before the floor is applied.
 
-If Ollama is not running, or the only installed chat model is larger than about 1.8 GB, the search still runs. Those roles are saved without a score. The preferred model is `qwen2.5:1.5b`. A smaller installed `qwen2.5` model is used when the configured one is missing or too large.
+If Ollama is not running, or the only installed chat model is larger than about 1.8 GB, the search still runs. Those roles are saved without a score. The preferred model is `qwen2.5:0.5b`. Another installed `qwen2.5` model under about 1.8 GB is used when that one is missing.
 
 ## Feeds
 
@@ -49,11 +49,11 @@ SQLite is created at `data/jobs.db` on first use. Saved roles and the ids of lis
 | --- | --- | --- |
 | `SQLITE_PATH` | `./data/jobs.db` | Database file |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama API |
-| `OLLAMA_MODEL` | `qwen2.5:1.5b` | Model used to read the CV and score roles |
+| `OLLAMA_MODEL` | `qwen2.5:0.5b` | Model used to read the CV and score roles |
 
 ## Installation
 
-You need Node.js 20.9 or newer, Yarn 4.18.1, and a browser. Ollama with `qwen2.5:1.5b` is needed for ranking. The installers set these up when they are missing.
+You need Node.js 20.9 or newer, Yarn 4.18.1, and a browser. Ollama with `qwen2.5:0.5b` is needed for ranking. The installers set these up when they are missing.
 
 Double-click the installer for your system, then the opener. Leave the opener’s window open while you use the app. It starts the dev server and opens http://127.0.0.1:3000.
 
@@ -63,7 +63,7 @@ Double-click the installer for your system, then the opener. Leave the opener’
 | Windows | `Install Job Finder.bat` | `Open Job Finder.bat` |
 | Linux | `Install Job Finder.desktop` or `Install Job Finder.sh` | `Open Job Finder.desktop` or `Open Job Finder.sh` |
 
-The Mac and Linux installers detect the system. If Node.js is missing or older than 20.9, they install the current Node.js LTS under your user account (`~/.local/job-finder/node`). Windows does the same with `Install Job Finder.bat` (`%LOCALAPPDATA%\job-finder\node`). They then install Yarn 4.18.1 through Corepack, install the packages in `yarn.lock`, and install Ollama plus `qwen2.5:1.5b` when that is possible. The site still opens if Ollama cannot be installed.
+The Mac and Linux installers detect the system. If Node.js is missing or older than 20.9, they install the current Node.js LTS under your user account (`~/.local/job-finder/node`). Windows does the same with `Install Job Finder.bat` (`%LOCALAPPDATA%\job-finder\node`). They then install Yarn 4.18.1 through Corepack, install the packages in `yarn.lock`, and install Ollama plus `qwen2.5:0.5b` when that is possible. The site still opens if Ollama cannot be installed.
 
 To install from a terminal instead:
 

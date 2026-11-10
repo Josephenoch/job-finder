@@ -6,7 +6,7 @@ export function ollamaHost(): string {
 }
 
 export function ollamaModel(): string {
-  return process.env.OLLAMA_MODEL ?? "qwen2.5:1.5b";
+  return process.env.OLLAMA_MODEL ?? "qwen2.5:0.5b";
 }
 
 const MAX_MODEL_BYTES = 1_800_000_000;
@@ -30,7 +30,7 @@ export async function analysisModel(): Promise<{ model: string } | { model: null
   if (picked) return { model: picked.name };
   return {
     model: null,
-    message: "Ranking needs a small model such as qwen2.5:1.5b. The installed model is too large and was not loaded.",
+    message: "Ranking needs a small model such as qwen2.5:0.5b. The installed model is too large and was not loaded.",
   };
 }
 

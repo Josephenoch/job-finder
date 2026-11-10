@@ -10,7 +10,7 @@ Set-Location $Root
 $NodeMin = [version]"20.9.0"
 $NodeHome = Join-Path $env:LOCALAPPDATA "job-finder\node"
 $YarnVersion = "4.18.1"
-if ($env:OLLAMA_MODEL) { $OllamaModel = $env:OLLAMA_MODEL } else { $OllamaModel = "qwen2.5:1.5b" }
+if ($env:OLLAMA_MODEL) { $OllamaModel = $env:OLLAMA_MODEL } else { $OllamaModel = "qwen2.5:0.5b" }
 
 function Write-Step([string]$Message) {
   Write-Host ""
@@ -162,7 +162,7 @@ function Install-Ollama {
       return
     }
   }
-  Write-Step "Downloading ranking model $OllamaModel (about 1 GB)"
+  Write-Step "Downloading ranking model $OllamaModel (about 400 MB)"
   & $ollama.Source pull $OllamaModel
   if ($LASTEXITCODE -ne 0) {
     Write-Warning "Could not download $OllamaModel."
