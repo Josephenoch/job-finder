@@ -11,7 +11,7 @@ The CV is read on your machine. Ranking uses [Ollama](https://ollama.com) on you
 3. The app extracts the CV text, asks Ollama for likely titles and keywords, and pulls listings from the public feeds below.
 4. A listing is kept when it was posted inside the time window, the location can be done from Nigeria (or it is a qualifying sponsored move), and the stated pay is not below the floor. Listings with no pay still pass the pay floor.
 5. Listings already searched, or the same company and title seen before, are skipped.
-6. The strongest keyword matches, up to 8, are scored one by one. Each description is cut to its first 280 characters before scoring. A role is saved when its score is at least 50. Each saved role stores the score and a short reason.
+6. Keyword matches are scored in batches of 20. Scoring starts as soon as the first 20 are ready, and fetching continues. Each later batch of 20 is added to that queue while scoring is still running. A shorter final batch is scored when the feeds finish. Each description is cut to its first 280 characters before scoring. A role is saved when its score is at least 50. Each saved role stores the score and a short reason.
 7. Open **Saved jobs** to track status: not applied, applied, interviewing, offer, rejected, or not interested.
 
 Defaults are the last 3 days and $2,000 per month. Pay in EUR, GBP, CAD, AUD, and NGN is converted to a rough monthly USD figure before the floor is applied.

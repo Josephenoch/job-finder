@@ -94,7 +94,7 @@ export async function loadAllFeeds(
   await Promise.all(Array.from({ length: Math.min(2, tasks.length) }, () => run()));
 
   if (options?.sponsoredMove) reports.push(...UNFETCHABLE);
-  return { jobs: [], reports };
+  return { jobs: [], reports: reports.filter((report): report is SourceReport => report != null) };
 }
 
 async function emit(pending: Promise<Job[]>, onJobs?: (jobs: Job[]) => void): Promise<number> {

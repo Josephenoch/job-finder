@@ -1,3 +1,4 @@
+import os from "node:os";
 import { z } from "zod";
 import { fetchText } from "@/lib/http";
 import { atsBoards } from "../boards";
@@ -124,8 +125,47 @@ function placeLabels(values: unknown[] | null | undefined): string[] {
   return labels;
 }
 
-const CONCURRENCY = 2;
+const TARGET_PER_SEC = 10;
+const MB_PER_BOARD = 8;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function maxInFlight(): number {
+  const freeMb = os.freemem() / (1024 * 1024);
+  const byRam = Math.floor(freeMb / MB_PER_BOARD);
+  const byCpu = os.availableParallelism() * 2;
+  return Math.max(2, Math.min(TARGET_PER_SEC, byRam, byCpu));
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function pacer(perSec: number): () => Promise<void> {
+  let nextAt = 0;
+  return async () => {
+    const now = Date.now();
+    const at = Math.max(now, nextAt);
+    nextAt = at + 1000 / perSec;
+    if (at > now) await delay(at - now);
+  };
+}
+
+function rateLimited(error: unknown): boolean {
+  return error instanceof Error && /\b429\b/.test(error.message);
+}
+
+async function runBoard(run: () => Promise<NormalizedJob[]>): Promise<NormalizedJob[]> {
+  let waitMs = 1000;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await run();
+    } catch (error) {
+      if (!rateLimited(error) || attempt === 3) throw error;
+      await delay(waitMs);
+      waitMs *= 2;
+    }
+  }
+}
 
 function inWindow(value: string | number | null | undefined, sinceMs: number, now = Date.now()): boolean {
   const posted = asDate(value);
@@ -254,21 +294,24 @@ export async function fetchJobs(
   const errors: string[] = [];
   let done = 0;
   onStatus?.(`Reading company boards, 0 of ${boards.length}…`);
-  await mapPool(boards, CONCURRENCY, async (board) => {
-    try {
-      const jobs = await board.run();
-      if (onJobs) {
-        if (jobs.length) onJobs(jobs);
-      } else if (jobs.length) collected.push(...jobs);
-    } catch (error) {
-      errors.push(`${board.label}: ${message(error)}`);
-    } finally {
-      done += 1;
-      if (onStatus && (done === boards.length || done % 50 === 0)) {
-        onStatus(`Reading company boards, ${done} of ${boards.length}…`);
+  await mapPool(
+    boards,
+    async (board) => {
+      try {
+        const jobs = await runBoard(board.run);
+        if (onJobs) {
+          if (jobs.length) onJobs(jobs);
+        } else if (jobs.length) collected.push(...jobs);
+      } catch (error) {
+        errors.push(`${board.label}: ${message(error)}`);
+      } finally {
+        done += 1;
+        if (onStatus && (done === boards.length || done % 50 === 0)) {
+          onStatus(`Reading company boards, ${done} of ${boards.length}…`);
+        }
       }
-    }
-  });
+    },
+  );
   if (errors.length === boards.length) throw new Error(`${errors.length} company boards failed. ${errors[0]}`);
   return collected;
 }

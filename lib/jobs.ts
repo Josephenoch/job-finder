@@ -21,7 +21,7 @@ export const PAY_OPTIONS = [
 
 export const DEFAULT_MAX_AGE_DAYS = 3;
 export const DEFAULT_MIN_MONTHLY_USD = 2000;
-export const MATCH_LIMIT = 8;
+export const MATCH_LIMIT = 20;
 
 export function maxAgeMs(days: number): number {
   return days * 24 * 60 * 60 * 1000;

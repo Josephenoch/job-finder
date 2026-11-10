@@ -2,15 +2,16 @@ import { io } from "next/cache";
 import { extractCv } from "@/lib/cv";
 import {
   acceptsNigeria,
-  considerMatch,
   formatSalary,
   isRecent,
   locationLabel,
+  MATCH_LIMIT,
   maxAgeMs,
   meetsPayFloor,
   offersCanadaOrUkMove,
   parseMaxAgeDays,
   parseMinMonthlyUsd,
+  termOverlap,
   termsFromText,
 } from "@/lib/jobs";
 import { analysisModel, type CandidateProfile, readCandidate, scoreBatch, unloadLargeModels } from "@/lib/ollama";
@@ -94,17 +95,39 @@ export async function POST(request: Request) {
         if (!terms.length) terms.push(...termsFromText(cvText));
 
         const saved: RankedJob[] = [];
-        const kept: { job: Job; rank: number }[] = [];
+        const batch: { job: Job; rank: number }[] = [];
+        const queue: Job[] = [];
         const seen = new Set<string>();
         const searchedIds = previous.ids;
         const knownRoles = previous.roles;
         let matched = 0;
         let skipped = 0;
+        let feedsDone = false;
+        let announced = false;
+        let wake = () => {};
+
+        const signal = () => {
+          const resume = wake;
+          wake = () => {};
+          resume();
+        };
 
         const qualifies = (job: Job) =>
           isRecent(job.postedAt, now, windowMs) &&
           (acceptsNigeria(job) || (sponsoredMove && offersCanadaOrUkMove(job))) &&
           meetsPayFloor(job, minMonthlyUsd);
+
+        const enqueue = (jobs: Job[]) => {
+          if (!jobs.length) return;
+          queue.push(...jobs);
+          signal();
+        };
+
+        const flushBatch = () => {
+          if (batch.length < MATCH_LIMIT) return;
+          batch.sort((a, b) => b.rank - a.rank || Date.parse(b.job.postedAt) - Date.parse(a.job.postedAt));
+          enqueue(batch.splice(0, MATCH_LIMIT).map((item) => item.job));
+        };
 
         const consider = (incoming: Job[]) => {
           for (const job of incoming) {
@@ -119,18 +142,14 @@ export async function POST(request: Request) {
             }
             seen.add(key);
             seen.add(job.id);
+            const rank = termOverlap(terms, job);
+            if (rank <= 0) continue;
             matched += 1;
-            considerMatch(kept, job, terms);
+            const brief = job.description.length > 280 ? { ...job, description: job.description.slice(0, 280) } : job;
+            batch.push({ job: brief, rank });
+            flushBatch();
           }
         };
-
-        send("status", { message: "Fetching job feeds…" });
-        const loaded = await loadAllFeeds((message) => send("status", { message }), now - windowMs, consider, {
-          sponsoredMove,
-          queries: terms.slice(0, 3),
-        });
-        send("sources", { sources: loaded.reports });
-        kept.sort((a, b) => b.rank - a.rank || Date.parse(b.job.postedAt) - Date.parse(a.job.postedAt));
 
         const markSearched = async (job: Job) => {
           searchedIds.add(job.id);
@@ -145,41 +164,63 @@ export async function POST(request: Request) {
         };
 
         let analyzed = 0;
-        const shortlist = kept.splice(0).map((item) => item.job);
-        seen.clear();
-        if (model) {
-          send("status", { message: "Reading job descriptions…" });
-          for (let index = 0; index < shortlist.length; index += 1) {
-            const job = shortlist[index];
-            if (!job) continue;
-            const keepAlive = index === shortlist.length - 1 ? "0" : "2m";
-            let row = { score: 0, reason: "Could not score this role" };
-            try {
-              const rows = await scoreBatch(model, profile, [job], minMonthlyUsd, sponsoredMove, keepAlive);
-              if (rows[0]) row = rows[0];
-            } catch {
-              row = { score: 0, reason: "Could not score this role" };
+        const analysis = (async () => {
+          while (true) {
+            const job = queue.shift();
+            if (!job) {
+              if (feedsDone) break;
+              await new Promise<void>((resolve) => {
+                wake = resolve;
+              });
+              continue;
             }
-            analyzed += 1;
-            if (row.score >= MIN_SCORE) await persist(toRanked(job, row.score, row.reason));
+            if (!announced) {
+              announced = true;
+              send("status", { message: "Reading job descriptions…" });
+            }
+            if (model) {
+              const keepAlive = feedsDone && queue.length === 0 ? "0" : "2m";
+              let row = { score: 0, reason: "Could not score this role" };
+              try {
+                const rows = await scoreBatch(model, profile, [job], minMonthlyUsd, sponsoredMove, keepAlive);
+                if (rows[0]) row = rows[0];
+              } catch {
+                row = { score: 0, reason: "Could not score this role" };
+              }
+              if (row.score >= MIN_SCORE) await persist(toRanked(job, row.score, row.reason));
+            } else {
+              await persist(toRanked(job, null, null));
+            }
             await markSearched(job);
-            send("progress", { done: analyzed, total: shortlist.length });
-          }
-        } else {
-          for (const job of shortlist) {
-            await persist(toRanked(job, null, null));
-            await markSearched(job);
             analyzed += 1;
-            send("progress", { done: analyzed, total: shortlist.length });
+            send("progress", { done: analyzed, total: analyzed + queue.length });
           }
-        }
+        })();
 
+        send("status", { message: "Fetching job feeds…" });
+        const feeds = loadAllFeeds(
+          (message) => send("status", { message: announced ? `${message} Scoring continues.` : message }),
+          now - windowMs,
+          consider,
+          { sponsoredMove, queries: terms.slice(0, 3) },
+        ).then((loaded) => {
+          send("sources", { sources: loaded.reports });
+          return loaded;
+        });
+        await feeds;
+        feedsDone = true;
+        if (batch.length) {
+          batch.sort((a, b) => b.rank - a.rank || Date.parse(b.job.postedAt) - Date.parse(a.job.postedAt));
+          enqueue(batch.splice(0).map((item) => item.job));
+        }
+        signal();
+        await analysis;
         saved.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || Date.parse(b.postedAt) - Date.parse(a.postedAt));
         send("result", {
           jobs: saved,
           matched,
           ranked: model ? saved.length : 0,
-          capped: matched > shortlist.length,
+          capped: false,
           summary: profile.summary,
           titles: profile.titles,
           minMonthlyUsd,

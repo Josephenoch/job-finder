@@ -27,10 +27,7 @@ type HimalayasPage = {
   nextCursor?: string | null;
 };
 
-export async function loadHimalayas(
-  sinceMs: number,
-  onPage?: (page: number) => void,
-): Promise<Job[]> {
+export async function loadHimalayas(sinceMs: number, onPage?: (page: number) => void): Promise<Job[]> {
   const jobs: Job[] = [];
   let cursor: string | undefined;
   for (let page = 1; page <= 80; page++) {
